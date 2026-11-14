@@ -200,34 +200,37 @@ class CartPole:
                     abs(ang_error) < 0.03 and abs(self.fi_dot) < 0.06):
                     reward += 30.0
             case 'G':
-                # Strongest penalty on cart (TCP) position
+                # Fully Stabilized High-Precision Controller for PPO
                 ang_error = self.err()
                 pos_error = self.x - self.desired_x
 
+                # 1. Stronger Base Damping: Prevent velocity and angular speed from spiraling
                 reward = (
-                    -30.0 * pos_error**2          # highest weight on position
-                    - 5.0 * self.x_dot**2
-                    - 6.0 * ang_error**2
-                    - 1.2 * self.fi_dot**2
-                    - 0.005 * self.current_force**2
+                    -6.0 * pos_error**2           # Position tracking weight
+                    - 4.0 * self.x_dot**2         # Increased cart velocity damping (acts as brakes)
+                    - 15.0 * ang_error**2         # High weight on pole angle
+                    - 6.0 * self.fi_dot**2        # Increased angular velocity damping
+                    - 0.005 * self.current_force**2 # Smooth action penalty
                 )
 
-                # Extra penalty when moving away from center
-                if pos_error * self.x_dot > 0:
-                    reward -= 12.0 * self.x_dot**2
+                # 2. Symmetric Kinetic Energy Penalty (Penalizes high speed when far from center, regardless of direction)
+                if abs(pos_error) > 0.05:
+                    reward -= 2.0 * self.x_dot**2
+                    reward -= 2.0 * self.fi_dot**2
 
-                # Very strong penalty when far from center
-                if abs(pos_error) > 0.1:
-                    reward -= 40.0 * pos_error**2
+                # 3. Soft Progressive Bounds for position and angle errors
+                if abs(pos_error) > 0.15:
+                    excess_pos = abs(pos_error) - 0.15
+                    reward -= 8.0 * excess_pos**2
 
-                # Extra penalty when angle is large
-                if abs(ang_error) > 0.05:
-                    reward -= 12.0 * ang_error**2
+                if abs(ang_error) > 0.08:
+                    excess_ang = abs(ang_error) - 0.08
+                    reward -= 12.0 * excess_ang**2
 
-                # Bonus only when TCP is very close to 0 and stable
+                # 4. Rich Stabilization Bonus for precise hovering
                 if (abs(pos_error) < 0.03 and abs(self.x_dot) < 0.05 and
                     abs(ang_error) < 0.03 and abs(self.fi_dot) < 0.05):
-                    reward += 40.0
+                    reward += 35.0
 
             case _:
                 reward = 0.0

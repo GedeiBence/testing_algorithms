@@ -14,7 +14,7 @@ def test_policy(actor, episodes=10):
     # Change them here if you want different test boundaries (without touching sim).
     MAX_X       = 2#pole.max_x          # currently 3.2
     MAX_X_DOT   = 15.0
-    MAX_FI      = np.deg2rad(18)#pole.max_angle      # currently 12°
+    MAX_FI      = np.deg2rad(28)#pole.max_angle      # currently 12°
     MAX_FI_DOT  = 15.0
     MAX_TIME    = 10#pole.max_time       # currently 3.0
 
