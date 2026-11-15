@@ -9,11 +9,11 @@ class CartPole:
         self.g = 9.81
         self.dt = 0.001
         self.control_steps = 20
-        self.max_force = 20.0
-        self.max_time = 3.0
-        self.max_x = 0.5
+        self.max_force = 30.0
+        self.max_time = 10.0
+        self.max_x = 1.7
         self.max_angle = np.deg2rad(12)
-        self.reward_type = 'G'
+        self.reward_type = 'A'
         self.desired_x = desired_x
         self.reset()
 
@@ -29,7 +29,7 @@ class CartPole:
         """Used during training."""
         self.x = 0.0
         self.x_dot = 0.0
-        self.fi = np.pi + np.deg2rad(np.random.uniform(-5, 5))
+        self.fi = np.pi + np.deg2rad(7)
         self.fi_dot = 0.0
         self.time = 0.0
         self.current_force = 0.0
@@ -37,7 +37,7 @@ class CartPole:
 
     def reset_2(self):
         """Used during testing (wider initial conditions)."""
-        self.x = 1.0
+        self.x = 0.0
         self.x_dot = 0.0
         self.fi = np.pi + np.deg2rad(np.random.uniform(-5, 5))
         self.fi_dot = 0.0
@@ -45,40 +45,39 @@ class CartPole:
         self.current_force = 0.0
         return self.get_state()
 
+    
     def step(self, force):
-        """Training step – terminates on success / fail / time."""
+        """Training step – terminates only on failure or time limit."""
         force = np.clip(force, -self.max_force, self.max_force)
         self.current_force = float(force)
+
         total_reward = 0.0
 
         for _ in range(self.control_steps):
             self._integrate(force)
+
             total_reward += self._instant_reward()
 
-            if abs(self.x) > self.max_x or abs(self.err()) > self.max_angle:
+            fail = (
+                abs(self.x) > self.max_x or
+                abs(self.err()) > self.max_angle
+            )
+
+            if fail:
                 break
 
-        success = (abs(self.err()) < 0.05 and abs(self.fi_dot) < 0.1 and
-                abs(self.x) < 0.1 and abs(self.x_dot) < 0.1)
-        fail = abs(self.x) > self.max_x or abs(self.err()) > self.max_angle
-        done = success or fail or self.time >= self.max_time
+        fail = (
+            abs(self.x) > self.max_x or
+            abs(self.err()) > self.max_angle
+        )
 
-        if success:
-            # Larger bonus when more stable
-            pos_error = self.x - self.desired_x
-            ang_error = self.err()
-            stability = (
-                1.0
-                - 8.0 * pos_error**2
-                - 2.0 * self.x_dot**2
-                - 10.0 * ang_error**2
-                - 0.8 * self.fi_dot**2
-            )
-            total_reward += 50.0 * max(0.0, stability)
-        elif fail:
-            total_reward -= 10.0
+        done = fail or self.time >= self.max_time
+
+        if fail:
+            total_reward -= 50.0
 
         return self.get_state(), total_reward, done, {}
+
 
     def step_test(self, force):
         """Testing step – no termination logic."""
@@ -105,6 +104,7 @@ class CartPole:
         self.x += self.x_dot * self.dt
         self.time += self.dt
 
+    
     def _instant_reward(self):
         pos_error = self.x - self.desired_x
         ang_error = self.err()
@@ -112,127 +112,17 @@ class CartPole:
         match self.reward_type:
             case 'A':
                 reward = (
-                    -pos_error**2
-                    - 0.1 * self.x_dot**2
+                    -10.0 * pos_error**2
+                    - 2.0 * self.x_dot**2
+                    - 100.0 * ang_error**2
+                    - 10.0 * self.fi_dot**2
                     - 0.01 * self.current_force**2
                 )
             case 'B':
-                reward = (
-                    -5.0 * pos_error**2
-                    - 0.5 * self.x_dot**2
-                    - 0.005 * self.current_force**2
-                )
-                reward -= 0.1
-                if abs(pos_error) < 0.005 and abs(self.x_dot) < 0.01:
-                    reward += 20.0
-            case 'C':
-                reward = -pos_error**2 - 0.5 * self.x_dot** - 0.01 * self.current_force**2
-            case 'D':
-                pos_error = self.x
-                ang_error = self.err()
-
-                reward = (
-                    -4.0 * pos_error**2
-                    - 1.0 * self.x_dot**2
-                    - 0.5 * ang_error**2
-                    - 0.01 * self.current_force**2
-                )
-
-                if abs(pos_error) > 0.3:
-                    reward -= 4.0 * pos_error**2
-
-                if abs(pos_error) < 0.05 and abs(self.x_dot) < 0.1 and abs(ang_error) < 0.05:
-                    reward += 20.0
-
-            case 'E':
-                
-                reward = (
-                    -4.0 * pos_error**2
-                    - 1.0 * self.x_dot**2
-                    - 3.0 * ang_error**2
-                    - 0.5 * self.fi_dot**2
-                    - 0.005 * self.current_force**2
-                )
-
-                # Stronger penalty when moving away from center
-                if pos_error * self.x_dot > 0:
-                    reward -= 4.0 * self.x_dot**2
-
-                # Extra penalty when far from center
-                if abs(pos_error) > 0.2:
-                    reward -= 8.0 * pos_error**2
-
-                # Extra penalty when angle is large
-                if abs(ang_error) > 0.1:
-                    reward -= 6.0 * ang_error**2
-
-                # Bonus only when both cart and pole are good
-                if (abs(pos_error) < 0.05 and abs(self.x_dot) < 0.1 and
-                    abs(ang_error) < 0.05 and abs(self.fi_dot) < 0.1):
-                    reward += 25.0
-
-            case 'F':
-                ang_error = self.err()
-                pos_error = self.x - self.desired_x
-
-                reward = (
-                    -5.0 * pos_error**2
-                    - 3.0 * self.x_dot**2
-                    - 5.0 * ang_error**2
-                    - 1.0 * self.fi_dot**2
-                    - 0.005 * self.current_force**2
-                )
-
-                # Extra penalty when moving away from center
-                if pos_error * self.x_dot > 0:
-                    reward -= 8.0 * self.x_dot**2
-
-                # Stronger penalty when far from center
-                if abs(pos_error) > 0.32:
-                    reward -= 20.0 * pos_error**8
-
-                # Extra penalty when angle is large
-                if abs(ang_error) > 0.06:
-                    reward -= 10.0 * ang_error**2
-
-                # Instant bonus only when very stable
-                if (abs(pos_error) < 0.04 and abs(self.x_dot) < 0.06 and
-                    abs(ang_error) < 0.03 and abs(self.fi_dot) < 0.06):
-                    reward += 30.0
-            case 'G':
-                # Strongest penalty on cart (TCP) position
-                ang_error = self.err()
-                pos_error = self.x - self.desired_x
-
-                reward = (
-                    -30.0 * pos_error**2          # highest weight on position
-                    - 5.0 * self.x_dot**2
-                    - 6.0 * ang_error**2
-                    - 1.2 * self.fi_dot**2
-                    - 0.005 * self.current_force**2
-                )
-
-                # Extra penalty when moving away from center
-                if pos_error * self.x_dot > 0:
-                    reward -= 12.0 * self.x_dot**2
-
-                # Very strong penalty when far from center
-                if abs(pos_error) > 0.1:
-                    reward -= 40.0 * pos_error**2
-
-                # Extra penalty when angle is large
-                if abs(ang_error) > 0.05:
-                    reward -= 12.0 * ang_error**2
-
-                # Bonus only when TCP is very close to 0 and stable
-                if (abs(pos_error) < 0.03 and abs(self.x_dot) < 0.05 and
-                    abs(ang_error) < 0.03 and abs(self.fi_dot) < 0.05):
-                    reward += 40.0
-
-            case _:
-                reward = 0.0
+                reward = -1
 
         return reward
+
 
     def gui(self):
         pass

@@ -148,6 +148,6 @@ class Agent:
 
 if __name__ == "__main__":
     agent = Agent(state_dim=4, action_dim=1)
-    agent.train(total_timesteps= 400_000)
+    agent.train(total_timesteps= 900_000)
     agent.save_policy()
-    test_cartpole_gui(agent.actor, episodes= 20)
+    test_cartpole_gui(agent.actor, episodes=20)

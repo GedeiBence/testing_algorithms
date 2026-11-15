@@ -16,10 +16,11 @@ class CartPole:
         self.control_steps = 20
         self.tau = self.dt * self.control_steps
         self.max_force = 100.0
-        self.max_angle = np.deg2rad(12)
+        self.max_angle = np.deg2rad(30)
         self.stable_angle = np.deg2rad(3)
-        self.max_time = 3.0
-        self.max_x = 3.2
+        self.max_time = 10.0
+        self.max_x = 1.2
+        self.reward_type = 'A'
         self.fi_desired = np.pi          # upright in your convention
         self.current_force = 0.0
         self.reset()
@@ -67,19 +68,37 @@ class CartPole:
     def calculate_reward(self, done=False):
         e = self.err()                          # angle error from upright
         x_err = self.x                          # cart position error
-        if done:
-            return -10.0
-        elif abs(e) <= self.stable_angle and abs(x_err) < 0.5:
-            return (
-                2.0
-                - 1.0 * e**2
-                - 0.2 * self.fi_dot**2
-                - 0.5 * x_err**2               # cart position penalty
-                - 0.1 * self.x_dot**2          # cart velocity penalty
-                - 0.01 * self.current_force**2
-            )
-        else:
-            return 0.0
+        match self.reward_type:
+            case 'A':
+                if done:
+                    return -10.0
+                elif abs(e) <= self.stable_angle and abs(x_err) < 0.5:
+                    return (
+                        2.0
+                        - 1.0 * e**2
+                        - 0.2 * self.fi_dot**2
+                        - 0.5 * x_err**2               # cart position penalty
+                        - 0.1 * self.x_dot**2          # cart velocity penalty
+                        - 0.01 * self.current_force**2
+                    )
+                else:
+                    return 0.0
+
+            case 'B':
+                if done:
+                    return -10.0
+                elif abs(e) <= self.stable_angle and abs(x_err) < 0.5:
+                    return (
+                        2.0
+                        - 1.0 * e**2
+                        - 0.2 * self.fi_dot**2
+                        - 0.5 * x_err**2               # cart position penalty
+                        - 1.1 * self.x_dot**2          # cart velocity penalty
+                        - 0.01 * self.current_force**2
+                    )
+                else:
+                    return 0.0
+
 
     def step(self, force):
         force = np.clip(force, -self.max_force, self.max_force)
@@ -102,7 +121,7 @@ class CartPole:
         """Fixed +5° from upright (π - 5°)"""
         self.x = 0.0
         self.x_dot = 0.0
-        self.fi = np.pi - np.deg2rad(5)
+        self.fi = np.pi - np.deg2rad(50)
         self.fi_dot = 0.0
         self.time = 0.0
         self.current_force = 0.0
@@ -112,7 +131,7 @@ class CartPole:
         """Small random around the training start"""
         self.x = 0.0
         self.x_dot = 0.0
-        self.fi = np.pi - np.deg2rad(5)#np.pi - np.deg2rad(np.random.uniform(-10, 10))
+        self.fi =np.pi - np.deg2rad(np.random.uniform(-180, 180))
         self.fi_dot = 0.0
         self.time = 0.0
         self.current_force = 0.0
