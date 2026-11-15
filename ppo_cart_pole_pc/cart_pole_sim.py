@@ -16,10 +16,10 @@ class CartPole:
         self.control_steps = 20
         self.tau = self.dt * self.control_steps
         self.max_force = 100.0
-        self.max_angle = np.deg2rad(30)
+        self.max_angle = np.deg2rad(180)
         self.stable_angle = np.deg2rad(3)
-        self.max_time = 10.0
-        self.max_x = 1.2
+        self.max_time = 8
+        self.max_x = 3.4
         self.reward_type = 'A'
         self.fi_desired = np.pi          # upright in your convention
         self.current_force = 0.0
@@ -36,11 +36,13 @@ class CartPole:
         return np.arctan2(np.sin(self.fi - self.fi_desired), np.cos(self.fi - self.fi_desired))
 
     def get_state(self):
-        e = self.err() / self.max_angle
-        w = self.fi_dot / 5.0
         x_norm = self.x / self.max_x
         v_norm = self.x_dot / 2.0
-        return np.array([x_norm, v_norm, e, w], dtype=np.float32)
+        e = self.err()
+        sin_e = np.sin(e)
+        cos_e = np.cos(e)
+        w = self.fi_dot / 5.0
+        return np.array([x_norm, v_norm, sin_e, cos_e, w], dtype=np.float32)
 
     def step_sim(self, force_x):
         denom = self.mc + self.mp * sin(self.fi)**2
@@ -49,21 +51,9 @@ class CartPole:
         self.x += self.x_dot * self.dt
 
         fi_dot_dot = (-force_x * cos(self.fi) - self.mp * self.l * self.fi_dot**2 * cos(self.fi) * sin(self.fi)
-                      - (self.mc + self.mp) * self.g * sin(self.fi)) / (self.l * denom)
+                    - (self.mc + self.mp) * self.g * sin(self.fi)) / (self.l * denom)
         self.fi_dot += fi_dot_dot * self.dt
         self.fi += self.fi_dot * self.dt
-
-        # Wall collision (from your old code)
-        if self.x > self.max_x:
-            self.x = self.max_x
-            if self.x_dot > 0:
-                self.fi_dot += self.x_dot * cos(self.fi) / self.l
-                self.x_dot = 0.0
-        elif self.x < -self.max_x:
-            self.x = -self.max_x
-            if self.x_dot < 0:
-                self.fi_dot += self.x_dot * cos(self.fi) / self.l
-                self.x_dot = 0.0
 
     def calculate_reward(self, done=False):
         e = self.err()                          # angle error from upright
@@ -77,71 +67,109 @@ class CartPole:
                         2.0
                         - 1.0 * e**2
                         - 0.2 * self.fi_dot**2
-                        - 0.5 * x_err**2               # cart position penalty
+                        - 1.5 * x_err**2             #was 0.5  # cart position penalty
                         - 0.1 * self.x_dot**2          # cart velocity penalty
                         - 0.01 * self.current_force**2
                     )
                 else:
-                    return 0.0
+                    return -0.04
 
             case 'B':
-                if done:
-                    return -10.0
-                elif abs(e) <= self.stable_angle and abs(x_err) < 0.5:
-                    return (
-                        2.0
-                        - 1.0 * e**2
-                        - 0.2 * self.fi_dot**2
-                        - 0.5 * x_err**2               # cart position penalty
-                        - 1.1 * self.x_dot**2          # cart velocity penalty
-                        - 0.01 * self.current_force**2
-                    )
-                else:
-                    return 0.0
+               return (
+                    np.cos(e)
+                    - 0.1 * self.fi_dot**2 
+                    - 1.0 * self.x**2          # was 0.1
+                    - 0.5 * self.x_dot**2      # was 0.05
+                    - 0.001 * self.current_force**2
+                )
 
 
     def step(self, force):
         force = np.clip(force, -self.max_force, self.max_force)
         self.current_force = float(force)
         total_reward = 0.0
+        hit_wall = False
 
         for _ in range(self.control_steps):
             self.step_sim(self.current_force)
             self.time += self.dt
             total_reward += self.calculate_reward()
-            if abs(self.err()) > self.max_angle or abs(self.x) > self.max_x or self.time > self.max_time:
+
+            if abs(self.x) >= self.max_x:          # >= so it catches the clamp
+                hit_wall = True
+                self.x = np.clip(self.x, -self.max_x, self.max_x)
+                self.x_dot = 0.0
+                break
+            if abs(self.err()) > self.max_angle or self.time > self.max_time:
                 break
 
-        done = abs(self.err()) > self.max_angle or abs(self.x) > self.max_x or self.time > self.max_time
-        if done:
+        done = abs(self.err()) > self.max_angle or hit_wall or self.time > self.max_time
+        if hit_wall:
+            total_reward += -10.0
+        elif done:
             total_reward += self.calculate_reward(done=True)
         return self.get_state(), total_reward, done, {}
 
     def reset(self):
-        """Fixed +5° from upright (π - 5°)"""
-        self.x = 0.0
-        self.x_dot = 0.0
-        self.fi = np.pi - np.deg2rad(50)
-        self.fi_dot = 0.0
+        # STAGE 2_v2
+        self.x = np.random.uniform(-0.5, 0.5)
+        self.x_dot = np.random.uniform(-1.0, 1.0)
+        self.fi = np.deg2rad(np.random.uniform(-30, 30))   # around hanging down
+        self.fi_dot = np.random.uniform(-2.0, 2.0)
         self.time = 0.0
         self.current_force = 0.0
         return self.get_state()
+    
+        # STAGE 4
+        """
+         self.x = np.random.uniform(-1.0, 1.0)
+        self.x_dot = np.random.uniform(-1.0, 1.0)
+        if np.random.rand() < 0.4:
+            # közel függőleges (hogy ne felejtse el a balance-t)
+            self.fi = np.pi + np.deg2rad(np.random.uniform(-40, 40))
+        else:
+            # teljes random
+            self.fi = np.random.uniform(-np.pi, np.pi)
+        self.fi_dot = np.random.uniform(-2.0, 2.0)
+        self.time = 0.0
+        self.current_force = 0.0
+        return self.get_state()
+        """
+       
+
+        # STAGE 3 (régi)
+        """
+        self.x = np.random.uniform(-0.3, 0.3)
+        self.x_dot = np.random.uniform(-0.5, 0.5)
+        self.fi = np.pi + np.deg2rad(np.random.uniform(-15, 15))
+        self.fi_dot = np.random.uniform(-1.0, 1.0)
+        self.time = 0.0
+        self.current_force = 0.0
+        return self.get_state()
+        """
+    
 
     def reset_test(self):
-        """Small random around the training start"""
+       
+        # STAGE 3
+       
         self.x = 0.0
         self.x_dot = 0.0
-        self.fi =np.pi - np.deg2rad(np.random.uniform(-180, 180))
+        self.fi = np.deg2rad(np.random.uniform(-3,3))
         self.fi_dot = 0.0
         self.time = 0.0
         self.current_force = 0.0
         return self.get_state()
+       
+        
+        
+       
 
     def gui(self):
         self.root = Tk()
         self.root.title("Cart-Pole")
-        self.root.geometry("500x350")
-        self.C = Canvas(self.root, bg="light gray", height=250, width=400)
+        self.root.geometry("1000x500")
+        self.C = Canvas(self.root, bg="light gray", height=400, width=700)
         self.C.pack()
         self.cart = self.C.create_rectangle(0, 0, 20, 20, fill="blue")
         self.pole = self.C.create_line(0, 0, 0, 0, fill="green", width=3)

@@ -12,7 +12,7 @@ def test_policy(actor, episodes=10):
     pole.gui()
 
     # Test boundaries (override sim defaults)
-    MAX_X       = 1.0
+    MAX_X       = 3.4
     MAX_X_DOT   = 15.0
     MAX_FI      = np.deg2rad(180)#pole.max_angle      # currently 12°
     MAX_FI_DOT  = 15.0
@@ -73,9 +73,22 @@ def test_policy(actor, episodes=10):
 
 
 if __name__ == "__main__":
-    actor = ActorNetwork(state_dim=4, action_dim=1, hidden_size=128)
-    actor.load_state_dict(torch.load("cartpole_actor.pth", map_location="cpu"))
+   
+
+    actor = ActorNetwork(state_dim=5, action_dim=1, hidden_size=128)
+
+    # STAGE 1.
+    #actor.load_state_dict(torch.load("cartpole_actor.pth", map_location="cpu"))
+
+    # STAGE 2.
+    #actor.load_state_dict(torch.load("actor_stage2.pth", map_location="cpu"))
+
+    # STAGE 3.
+    actor.load_state_dict(torch.load("actor_stage3.pth", map_location="cpu"))
+
+    # STAGE 4.
+    #actor.load_state_dict(torch.load("actor_stage4.pth", map_location="cpu"))
     actor.eval()
 
     print("Policy loaded. Starting test...")
-    test_policy(actor, episodes=5)
+    test_policy(actor, episodes=20)

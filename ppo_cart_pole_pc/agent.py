@@ -18,7 +18,7 @@ BATCH_SIZE = 256
 ROLLOUT_STEPS = 2048
 
 class Agent:
-    def __init__(self, state_dim=4, action_dim=1):
+    def __init__(self, state_dim=5, action_dim=1):
         self.device = torch.device("cpu")
         print("Using device: cpu")
 
@@ -147,7 +147,7 @@ class Agent:
 
 
 if __name__ == "__main__":
-    agent = Agent(state_dim=4, action_dim=1)
-    agent.train(total_timesteps= 900_000)
+    agent = Agent(state_dim=5, action_dim=1)
+    agent.train(total_timesteps=1_400_000)
     agent.save_policy()
     test_cartpole_gui(agent.actor, episodes=20)
