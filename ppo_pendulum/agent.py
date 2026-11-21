@@ -158,6 +158,6 @@ class Agent:
 
 if __name__ == "__main__":
     agent = Agent()
-    agent.train(total_timesteps=600_000)
+    agent.train(total_timesteps=1_000_000)
     agent.save_policy()
     test_pendulum_gui(agent.actor, episodes=10)

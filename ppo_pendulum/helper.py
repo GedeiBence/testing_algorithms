@@ -9,9 +9,9 @@ plt.ion()
 def plot(scores, mean_scores, window=50):
     """
     Live plot of episode scores and moving average.
-    Works in Jupyter and in regular Python scripts.
+    Only updates every 100 episodes.
     """
-    if len(scores) == 0:
+    if len(scores) == 0 or len(scores) % 100 != 0:
         return
 
     display.clear_output(wait=True)

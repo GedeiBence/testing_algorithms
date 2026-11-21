@@ -17,10 +17,11 @@ class CartPole:
         self.tau = self.dt * self.control_steps
         self.max_force = 100.0
         self.max_angle = np.deg2rad(180)
-        self.stable_angle = np.deg2rad(3)
+        self.stable_angle = np.deg2rad(25)
         self.max_time = 8
         self.max_x = 3.4
-        self.reward_type = 'A'
+        self.max_fi_dot = 15
+        self.reward_type = 'D'
         self.fi_desired = np.pi          # upright in your convention
         self.current_force = 0.0
         self.reset()
@@ -83,6 +84,51 @@ class CartPole:
                     - 0.001 * self.current_force**2
                 )
 
+            case 'C':
+                if done:
+                    return -10.0
+                elif abs(e) <= self.stable_angle and abs(x_err) < 0.7:
+                    return (
+                        10.0
+                        - 1.0 * e**2
+                        - 0.2 * self.fi_dot**2
+                        - 1.5 * x_err**2
+                        - 0.1 * self.x_dot**2
+                        - 0.01 * self.current_force**2
+                    )
+                else:
+                    return -0.03 -  0.005 * e**2
+
+            case 'D':
+                if done:
+                    return -10.0
+
+                # High reward near upright (±3°)
+                if abs(e) <= np.deg2rad(3) and abs(x_err) < 0.5:
+                    return (
+                        5.0
+                        - 2.0 * e**2
+                        - 0.3 * self.fi_dot**2
+                        - 2.0 * x_err**2
+                        - 0.2 * self.x_dot**2
+                        - 0.01 * self.current_force**2
+                    )
+
+                # Lower reward in the wider region (±25°)
+                elif abs(e) <= np.deg2rad(25) and abs(x_err) < 0.8:
+                    return (
+                        1.5
+                        - 0.5 * e**2
+                        - 0.1 * self.fi_dot**2
+                        - 0.8 * x_err**2
+                        - 0.05 * self.x_dot**2
+                        - 0.005 * self.current_force**2
+                    )
+
+                # Continuous guidance outside
+                else:
+                    return -0.03 - 0.01 * e**2
+
 
     def step(self, force):
         force = np.clip(force, -self.max_force, self.max_force)
@@ -103,7 +149,7 @@ class CartPole:
             if abs(self.err()) > self.max_angle or self.time > self.max_time:
                 break
 
-        done = abs(self.err()) > self.max_angle or hit_wall or self.time > self.max_time
+        done = abs(self.err()) > self.max_angle or hit_wall or self.time > self.max_time or self.fi_dot > self.max_fi_dot
         if hit_wall:
             total_reward += -10.0
         elif done:
@@ -111,10 +157,10 @@ class CartPole:
         return self.get_state(), total_reward, done, {}
 
     def reset(self):
-        # STAGE 2_v2
+        # Ultimamento
         self.x = np.random.uniform(-0.5, 0.5)
         self.x_dot = np.random.uniform(-1.0, 1.0)
-        self.fi = np.deg2rad(np.random.uniform(-30, 30))   # around hanging down
+        self.fi = np.deg2rad(np.random.uniform(-180, 180))
         self.fi_dot = np.random.uniform(-2.0, 2.0)
         self.time = 0.0
         self.current_force = 0.0
@@ -150,16 +196,26 @@ class CartPole:
     
 
     def reset_test(self):
-       
-        # STAGE 3
-       
+        # Ultimate
+        self.x = np.random.uniform(-0.5, 0.5)
+        self.x_dot = np.random.uniform(-5.0, 5.0)
+        self.fi =np.pi- np.deg2rad(np.random.uniform(-90, 90))
+        self.fi_dot = np.random.uniform(-2.0, 2.0)
+        self.time = 0.0
+        self.current_force = 0.0
+        return self.get_state()
+    
+       # Stage 4
+        """
         self.x = 0.0
         self.x_dot = 0.0
-        self.fi = np.deg2rad(np.random.uniform(-3,3))
+        self.fi = np.pi - np.deg2rad(40)# np.deg2rad(np.random.uniform(-80,80))
         self.fi_dot = 0.0
         self.time = 0.0
         self.current_force = 0.0
         return self.get_state()
+        """
+        
        
         
         

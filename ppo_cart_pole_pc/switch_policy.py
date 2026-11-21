@@ -86,7 +86,7 @@ if __name__ == "__main__":
     actor_swing   = ActorNetwork(state_dim=5, action_dim=1, hidden_size=128)
 
     actor_balance.load_state_dict(torch.load("actor_stage4.pth", map_location="cpu"))
-    actor_swing.load_state_dict(torch.load("actor_stage2.pth", map_location="cpu"))
+    actor_swing.load_state_dict(torch.load("actor_ultimate.pth", map_location="cpu"))
 
     actor_balance.eval()
     actor_swing.eval()

@@ -84,10 +84,14 @@ if __name__ == "__main__":
     #actor.load_state_dict(torch.load("actor_stage2.pth", map_location="cpu"))
 
     # STAGE 3.
-    actor.load_state_dict(torch.load("actor_stage3.pth", map_location="cpu"))
+    #actor.load_state_dict(torch.load("actor_stage3.pth", map_location="cpu"))
 
     # STAGE 4.
     #actor.load_state_dict(torch.load("actor_stage4.pth", map_location="cpu"))
+
+    # Ultimate
+    actor.load_state_dict(torch.load("actor_ultimate2.pth", map_location="cpu"))
+
     actor.eval()
 
     print("Policy loaded. Starting test...")
