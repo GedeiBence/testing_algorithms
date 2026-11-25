@@ -7,12 +7,12 @@ if __name__ == "__main__":
     agent = Agent(state_dim=5, action_dim=1)
 
     # Load previous model (ultimate3)
-    agent.actor.load_state_dict(torch.load("actor_ultimate3.pth"))
-    agent.critic.load_state_dict(torch.load("critic_ultimate3.pth"))
-    print("Loaded actor_ultimate3.pth and critic_ultimate3.pth")
-
+    #agent.actor.load_state_dict(torch.load("actor_ultimate3.pth"))
+    #agent.critic.load_state_dict(torch.load("critic_ultimate3.pth"))
+    #print("Loaded actor_ultimate3.pth and critic_ultimate3.pth")
     # Continue training
-    agent.train(total_timesteps=2_000_000)   # or however many more steps you want
+    
+    agent.train(total_timesteps=2_000_000)   
 
     # Save as ultimate4
     torch.save(agent.actor.state_dict(), "actor_ultimate4.pth")

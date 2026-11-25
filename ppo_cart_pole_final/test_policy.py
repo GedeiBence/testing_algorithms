@@ -5,11 +5,13 @@ import numpy as np
 from train.models import ActorNetwork
 from train.cart_pole_sim import CartPole
 
+time.sleep(2)
 
 def test_policy(actor, episodes=10):
     actor.eval()
     pole = CartPole()
     pole.gui()
+    counter = 0
 
     # Test boundaries
     MAX_X       = 3.4
@@ -24,7 +26,8 @@ def test_policy(actor, episodes=10):
     print("="*50)
 
     for ep in range(episodes):
-        state = pole.reset_test()
+        pole.current_episode = ep + 1
+        state = pole.reset_test()        
         total_reward = 0.0
         last_log = 0.0
 
@@ -61,9 +64,12 @@ def test_policy(actor, episodes=10):
                 last_log = pole.time
 
             if done:
+                if pole.time < MAX_TIME:
+                    counter += 1
                 break
 
         print(f"Ended | Time: {pole.time:.2f}s | Total reward: {total_reward:.1f}")
+        print("fail count:", counter,"/ ",ep)
 
         if pole.stop_training:
             break
@@ -78,9 +84,9 @@ if __name__ == "__main__":
     actor = ActorNetwork(state_dim=5, action_dim=1, hidden_size=128)
 
     # Ultimate
-    actor.load_state_dict(torch.load("actor_ultimate4.pth", map_location="cpu"))
+    actor.load_state_dict(torch.load("actor_ultimate2.pth", map_location="cpu"))
 
     actor.eval()
 
     print("Policy loaded. Starting test...")
-    test_policy(actor, episodes=20)
+    test_policy(actor, episodes=10)

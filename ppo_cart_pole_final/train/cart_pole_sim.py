@@ -21,9 +21,10 @@ class CartPole:
         self.max_time = 8
         self.max_x = 3.4
         self.max_fi_dot = 15
-        self.reward_type = 'D'
+        self.reward_type = 'B'
         self.fi_desired = np.pi         
         self.current_force = 0.0
+        self.current_episode = 1
         self.reset()
 
         # GUI
@@ -214,10 +215,6 @@ class CartPole:
         return self.get_state()
         """
         
-       
-        
-        
-       
 
     def gui(self):
         self.root = Tk()
@@ -227,11 +224,13 @@ class CartPole:
         self.C.pack()
         self.cart = self.C.create_rectangle(0, 0, 20, 20, fill="blue")
         self.pole = self.C.create_line(0, 0, 0, 0, fill="green", width=3)
-        self.x0 = 450          # középre
+        self.x0 = 450
         self.y0 = 200
-        # skála: a ±max_x férjen a vászonba (margóval)
         self.px = 350 / self.max_x
         self.r = 80 * self.l
+
+        # Minimális szöveges kiírás
+        self.info_text = self.C.create_text(20, 20, anchor="nw", font=("Arial", 14), fill="black")
 
     def update_gui(self):
         if self.C is None:
@@ -239,11 +238,20 @@ class CartPole:
         origo_x = self.x0 + self.x * self.px
         self.C.coords(self.cart, origo_x - 10, self.y0 - 10, origo_x + 10, self.y0 + 10)
         self.C.coords(self.pole,
-                      origo_x, self.y0,
-                      origo_x + self.r * sin(self.fi),
-                      self.y0 + self.r * cos(self.fi))
-        self.root.update()
+                    origo_x, self.y0,
+                    origo_x + self.r * sin(self.fi),
+                    self.y0 + self.r * cos(self.fi))
 
+        # Szöveg frissítése
+        fi_deg = np.rad2deg(self.fi)
+        text = f"Episode: {getattr(self, 'current_episode', 1)}\n"
+        text += f"Time: {self.time:.1f}s\n"
+        text += f"Angle: {fi_deg:.1f}°\n"
+        text += f"x: {self.x:.2f} m\n"
+        text += f"Force: {self.current_force:.1f} N"
+        self.C.itemconfig(self.info_text, text=text)
+
+        self.root.update()
 
 def test_cartpole_gui(actor, episodes=5):
     actor.eval()

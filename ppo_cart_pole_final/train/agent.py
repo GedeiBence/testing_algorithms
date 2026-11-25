@@ -47,8 +47,8 @@ class Agent:
         return advantages, returns
 
     def save_policy(self):
-        torch.save(self.actor.state_dict(), "cartpole_actor.pth")
-        torch.save(self.critic.state_dict(), "cartpole_critic.pth")
+        torch.save(self.actor.state_dict(), "cartpole_actor_v8.pth")
+        torch.save(self.critic.state_dict(), "cartpole_critic_v8.pth")
         print("Models saved.")
 
     def update(self, states, actions, old_log_probs, advantages, returns):
@@ -148,6 +148,6 @@ class Agent:
 
 if __name__ == "__main__":
     agent = Agent(state_dim=5, action_dim=1)
-    agent.train(total_timesteps=3_000_000)
+    agent.train(total_timesteps=600_000)
     agent.save_policy()
     test_cartpole_gui(agent.actor, episodes=5)
