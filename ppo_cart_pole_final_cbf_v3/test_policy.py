@@ -12,6 +12,9 @@ def test_policy(actor, episodes=10):
     pole = CartPole()
     pole.gui()
     counter = 0
+
+    # Phase 1 modell: CBF ki
+    # Phase 2 modell: CBF be
     pole.use_cbf = True
     pole.cbf_lambda = 2.0
     pole.barrier_move = True
@@ -19,12 +22,12 @@ def test_policy(actor, episodes=10):
     # Test boundaries
     MAX_X       = 3.4
     MAX_X_DOT   = 15.0
-    MAX_FI      = np.deg2rad(180)#pole.max_angle      
+    MAX_FI      = np.deg2rad(180)
     MAX_FI_DOT  = 15.0
     MAX_TIME    = 20.0
 
     print("\n" + "="*50)
-    print("TESTING TRAINED POLICY")
+    print("TESTING PHASE 1 POLICY (CBF OFF)")
     print(f"Boundaries: |x|≤{MAX_X}, |fi|≤{np.rad2deg(MAX_FI):.0f}°, t≤{MAX_TIME}s")
     print("="*50)
 
@@ -35,9 +38,9 @@ def test_policy(actor, episodes=10):
         last_log = 0.0
 
         print(f"\n--- Episode {ep+1} ---")
-        print("  Time |      x | fi (deg) |   fi_dot |    Force")
+        print(f"Barrier center: {pole.barrier_center:.2f} | half: {pole.barrier_half:.2f}")
+        print("  Time |      x | fi (deg) |   fi_dot |    Force |   Reward |  Dist")
 
-        # Apply the test boundaries
         pole.max_x = MAX_X
         pole.max_angle = MAX_FI
         pole.max_time = MAX_TIME
@@ -63,7 +66,8 @@ def test_policy(actor, episodes=10):
             time.sleep(0.01)
 
             if pole.time - last_log >= 0.1:
-                print(f"  {pole.time:5.2f} | {pole.x:6.2f} | {np.rad2deg(pole.fi):7.2f} | {pole.fi_dot:8.3f} | {force:8.2f}")
+                d = pole._signed_dist_to_barrier(pole.x)
+                print(f"  {pole.time:5.2f} | {pole.x:6.2f} | {np.rad2deg(pole.fi):7.2f} | {pole.fi_dot:8.3f} | {force:8.2f}| {reward:8.2f}| {d:6.2f}")
                 last_log = pole.time
 
             if done:
@@ -82,13 +86,8 @@ def test_policy(actor, episodes=10):
 
 
 if __name__ == "__main__":
-   
-
     actor = ActorNetwork(state_dim=7, action_dim=1, hidden_size=128)
-
-    # Ultimate
-    actor.load_state_dict(torch.load("actor_cbf_v3.pth", map_location="cpu"))
-
+    actor.load_state_dict(torch.load("actor_cbf_from_start_v2.pth", map_location="cpu"))
     actor.eval()
 
     print("Policy loaded. Starting test...")

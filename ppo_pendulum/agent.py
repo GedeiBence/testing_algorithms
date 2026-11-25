@@ -2,7 +2,6 @@
 import torch
 import torch.nn.functional as F
 import numpy as np
-from sim import SystemSim
 from models import ActorNetwork, CriticNetwork
 from helper import plot, compute_moving_average
 from pendulum_sim import Pendulum, test_pendulum_gui
